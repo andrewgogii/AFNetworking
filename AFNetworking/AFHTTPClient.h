@@ -485,6 +485,10 @@ typedef enum {
  */
 extern NSString * AFQueryStringFromParametersWithEncoding(NSDictionary *parameters, NSStringEncoding encoding);
 
+extern NSString * AFBase64EncodedStringFromString(NSString *string);
+
+extern NSString * AFPercentEscapedQueryStringPairMemberFromStringWithEncoding(NSString *string, NSStringEncoding encoding);
+
 ///--------------------
 /// @name Notifications
 ///--------------------
