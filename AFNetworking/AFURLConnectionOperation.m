@@ -145,6 +145,9 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
 @synthesize redirectResponse = _redirectResponse;
 @synthesize lock = _lock;
 
+//Gogii Add ons
+@synthesize startTime = _startTime, endTime = _endTime, retries = _retries;
+
 + (void)networkRequestThreadEntryPoint:(id)__unused object {
     do {
         @autoreleasepool {
@@ -421,7 +424,7 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
         [self finish];
     } else {
         self.connection = [[[NSURLConnection alloc] initWithRequest:self.request delegate:self startImmediately:NO] autorelease];
-        
+        _startTime = [[NSDate date] timeIntervalSince1970];
         NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
         for (NSString *runLoopMode in self.runLoopModes) {
             [self.connection scheduleInRunLoop:runLoop forMode:runLoopMode];
@@ -434,6 +437,7 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
 }
 
 - (void)finish {
+    _endTime = [[NSDate date] timeIntervalSince1970];
     self.state = AFOperationFinishedState;
 }
 
@@ -622,7 +626,7 @@ didReceiveResponse:(NSURLResponse *)response
     self.error = [aDecoder decodeObjectForKey:@"error"];
     self.responseData = [aDecoder decodeObjectForKey:@"responseData"];
     self.totalBytesRead = [[aDecoder decodeObjectForKey:@"totalBytesRead"] longLongValue];
-    
+    self.retries = [aDecoder decodeIntForKey:@"retries"];
     return self;
 }
 
@@ -646,6 +650,7 @@ didReceiveResponse:(NSURLResponse *)response
     [aCoder encodeObject:self.error forKey:@"error"];
     [aCoder encodeObject:self.responseData forKey:@"responseData"];
     [aCoder encodeObject:[NSNumber numberWithLongLong:self.totalBytesRead] forKey:@"totalBytesRead"];
+    [aCoder encodeInt:self.retries forKey:@"retries"];
 }
 
 #pragma mark - NSCopying
@@ -659,6 +664,7 @@ didReceiveResponse:(NSURLResponse *)response
     operation.authenticationChallenge = self.authenticationChallenge;
     operation.cacheResponse = self.cacheResponse;
     operation.redirectResponse = self.redirectResponse;
+    operation.retries = self.retries;
 
     return operation;
 }

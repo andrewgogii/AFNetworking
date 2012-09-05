@@ -21,7 +21,7 @@
 // THE SOFTWARE.
 
 #import "AFKissXMLRequestOperation.h"
-
+#import "NSXMLElementAdditions.h"
 static dispatch_queue_t af_kissxml_request_operation_processing_queue;
 static dispatch_queue_t kissxml_request_operation_processing_queue() {
     if (af_kissxml_request_operation_processing_queue == NULL) {
@@ -83,7 +83,65 @@ static dispatch_queue_t kissxml_request_operation_processing_queue() {
         return [super error];
     }
 }
-
+-(void)parseXMLNode:(NSXMLNode*)parent dataContainer:(id)resultsContainer 
+{
+    int nChildCount = [parent childCount];
+    for(int i = 0; i < nChildCount; i++)
+    {
+        NSXMLNode * node = [parent childAtIndex:i];
+        NSString * nodeName = [node name];
+        if(![node isKindOfClass:[NSXMLElement class]])
+            continue;
+        NSXMLElement * elementNode = (NSXMLElement*)node;
+        NSMutableDictionary * elementDict = [elementNode attributesAsDictionary];
+        if([node childCount] == 0)
+        {
+            //Fix for empty arrays
+            if([elementDict objectForKey:@"count"])
+                elementDict = [NSArray array];
+            
+            if([resultsContainer isKindOfClass:[NSMutableDictionary class]])
+                [resultsContainer setObject:elementDict forKey:nodeName];
+            else if([resultsContainer isKindOfClass:[NSMutableArray class]])
+                [resultsContainer addObject:elementDict];
+        }
+        else 
+        {
+            BOOL bRelease = NO;
+            id newContainer = nil;
+            //NSXMLNode * firstChild = [node childAtIndex:0];            
+            //NSArray * totalElements = [elementNode elementsForName:[firstChild name]];
+            //Always used by our server to designate an array
+            if([elementDict objectForKey:@"count"])
+            {
+                newContainer = [[NSMutableArray alloc] initWithCapacity:[node childCount]];
+                bRelease = YES;
+            }
+            else 
+            {
+                if([elementDict count] == 0)
+                {
+                    newContainer = [[NSMutableDictionary alloc] initWithCapacity:[node childCount]];
+                    bRelease = YES;
+                }
+                else 
+                    newContainer = elementDict;
+            }
+            
+            [self parseXMLNode:node dataContainer:newContainer];
+            
+            if([resultsContainer isKindOfClass:[NSMutableDictionary class]])
+            {
+                [resultsContainer setObject:newContainer forKey:nodeName];
+            }
+            else 
+                [resultsContainer addObject:newContainer];
+            
+            if(bRelease)
+                [newContainer release];
+        }
+    }
+}
 #pragma mark - AFHTTPRequestOperation
 
 + (NSSet *)acceptableContentTypes {
@@ -120,6 +178,11 @@ static dispatch_queue_t kissxml_request_operation_processing_queue() {
                     }
                 }
                 else{
+                    NSMutableDictionary * results = [[[NSMutableDictionary alloc] initWithCapacity:20] autorelease];
+                    NSXMLNode * root = [self.responseXMLDocument rootElement];
+                    [root detach];
+                    [self parseXMLNode:root dataContainer:results];
+
                     if (success) {
                         dispatch_async( self.successCallbackQueue ? self.successCallbackQueue : dispatch_get_main_queue(), ^{
                             success(self, XMLDocument);

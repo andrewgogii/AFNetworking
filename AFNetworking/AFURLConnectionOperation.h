@@ -135,6 +135,21 @@
  */
 @property (nonatomic, retain) NSOutputStream *outputStream;
 
+///-----------------------
+///     GOGII Additions
+///-----------------------
+
+/**
+ Used for performance analysis and set with the operation starts and ends
+ */
+@property (readwrite, nonatomic, assign) int retries;
+
+@property (readwrite, nonatomic, assign) double startTime;
+
+@property (readwrite, nonatomic, assign) double endTime;
+
+/*************************/
+
 ///------------------------------------------------------
 /// @name Initializing an AFURLConnectionOperation Object
 ///------------------------------------------------------
