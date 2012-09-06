@@ -22,6 +22,7 @@
 
 #import "AFKissXMLRequestOperation.h"
 #import "NSXMLElementAdditions.h"
+#import "SecKeyWrapper.h"
 static dispatch_queue_t af_kissxml_request_operation_processing_queue;
 static dispatch_queue_t kissxml_request_operation_processing_queue() {
     if (af_kissxml_request_operation_processing_queue == NULL) {
@@ -69,7 +70,11 @@ static dispatch_queue_t kissxml_request_operation_processing_queue() {
 - (DDXMLDocument *)responseXMLDocument {
     if (!_responseXMLDocument && [self isFinished] && [self.responseData length] > 0) {
         NSError *error = nil;
-        self.responseXMLDocument = [[[DDXMLDocument alloc] initWithData:self.responseData options:0 error:&error] autorelease];
+        NSData * decodeData = self.responseData;
+        if([self.request valueForHTTPHeaderField:CUSTOM_ENCODED_HEADER_FLAG])
+            decodeData =[SecKeyWrapper decodeDataForEncodedData:self.responseData];
+        
+        self.responseXMLDocument = [[[DDXMLDocument alloc] initWithData:decodeData options:0 error:&error] autorelease];
         self.XMLError = error;
     }
     
@@ -185,7 +190,7 @@ static dispatch_queue_t kissxml_request_operation_processing_queue() {
 
                     if (success) {
                         dispatch_async( self.successCallbackQueue ? self.successCallbackQueue : dispatch_get_main_queue(), ^{
-                            success(self, XMLDocument);
+                            success(self, results);
                         });
                     }
                 }
